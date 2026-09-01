@@ -101,50 +101,45 @@ const LEVEL_3: Omit<TriageResponse, "clinicalSummary" | "requestId" | "timestamp
  * the pool the mock triage can attach to a "limited_information" response.
  */
 export const FOLLOW_UP_POOL: FollowUpQuestion[] = [
+  // Combined timing + onset-pattern question. Previously "When did this start?"
+  // and "Did it start suddenly?" were asked separately, which felt redundant.
+  // A single question captures both the timing and whether it was sudden.
   {
     questionId: "onset",
-    question: "When did this start?",
+    question: "When and how did it start?",
     answerType: "single_select",
-    answerOptions: ["Just now", "Today", "Yesterday", "A few days ago", "Longer"],
+    answerOptions: [
+      "Suddenly, in the last hour",
+      "Suddenly, earlier today",
+      "Came on gradually today",
+      "Started yesterday",
+      "A few days ago or longer",
+    ],
     canSkip: true,
-    whyNeededCategory: "timing",
+    whyNeededCategory: "onset",
   },
   {
     questionId: "severity",
-    question: "How would you rate the severity right now?",
+    question: "How bad is it right now?",
     answerType: "single_select",
     answerOptions: ["Mild", "Moderate", "Severe"],
     canSkip: true,
     whyNeededCategory: "severity",
   },
   {
-    questionId: "sudden_onset",
-    question: "Did it start suddenly?",
-    answerType: "boolean",
-    canSkip: true,
-    whyNeededCategory: "onset_pattern",
-  },
-  {
     questionId: "progression",
-    question: "Is it improving, staying the same, or getting worse?",
+    question: "Since it began, is it getting better, staying the same, or getting worse?",
     answerType: "single_select",
-    answerOptions: ["Improving", "About the same", "Getting worse"],
+    answerOptions: ["Getting better", "About the same", "Getting worse"],
     canSkip: true,
     whyNeededCategory: "progression",
   },
   {
     questionId: "associated_symptoms",
-    question: "Do you have any other symptoms alongside this?",
+    question: "Any other symptoms alongside this? (for example: fever, nausea, dizziness)",
     answerType: "text",
     canSkip: true,
     whyNeededCategory: "associated_symptoms",
-  },
-  {
-    questionId: "relevant_conditions",
-    question: "Do you have any relevant medical conditions?",
-    answerType: "text",
-    canSkip: true,
-    whyNeededCategory: "history",
   },
 ];
 

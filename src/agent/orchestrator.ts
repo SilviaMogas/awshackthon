@@ -268,11 +268,11 @@ async function finalizeTriage(
 function userFacingForLevel(triage: TriageResponse): string {
   switch (triage.triageLevel) {
     case 3:
-      return "Based on what you described, urgent medical help may be needed. Please read the emergency guidance now.";
+      return "This may be a medical emergency. Contact your local emergency services or go to the nearest emergency department now. The emergency guidance below has the number to call and what to do while you wait.";
     case 2:
-      return "Based on what you described, we recommend medical attention within 24 hours.";
+      return "Based on what you described, we recommend that you see a healthcare professional within the next 24 hours. See the guidance below, and if things get worse, seek urgent care sooner.";
     default:
-      return "Based on what you described, here is general guidance and what to monitor.";
+      return "Based on what you described, here is general guidance and what to monitor. If your symptoms change or get worse, check again or seek medical care.";
   }
 }
 
