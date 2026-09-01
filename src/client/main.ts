@@ -3,7 +3,7 @@
  * This is the interaction layer only — all triage decisions come from the
  * server-side agent + clinical triage service (the source of truth).
  */
-import { store, AppState } from "./store.js";
+import { store, AppState, ChatEntry } from "./store.js";
 import { api, ApiError } from "./api.js";
 import { createTranslator, isRtl, Lang } from "./i18n.js";
 import { el, mount } from "./dom.js";
@@ -30,6 +30,7 @@ import {
   ScreenActions,
 } from "./components/screens.js";
 import { levelThreeResult } from "./components/level3.js";
+import { chatScreen, ChatActions } from "./components/chat.js";
 import { privacyScreen } from "./components/privacy.js";
 import { clinicalSummaryCard, buildSummaryText } from "./components/summary-card.js";
 import { technicalPanel } from "./components/technical-panel.js";
@@ -72,13 +73,44 @@ async function refreshAudit(): Promise<void> {
   }
 }
 
+// ---- Chat log helpers -----------------------------------------------------
+function pushChat(role: ChatEntry["role"], content: string, kind: ChatEntry["kind"]): void {
+  const s = store.get();
+  store.set({ chatLog: [...s.chatLog, { id: genId("msg"), role, content, kind, timestamp: nowIso() }] });
+}
+
+/** Add a transient "typing" bubble so the chat feels responsive. */
+function pushTyping(t: (k: string) => string): string {
+  const id = genId("typing");
+  const s = store.get();
+  store.set({
+    chatLog: [...s.chatLog, { id, role: "agent", content: t("chat_agent_typing"), kind: "typing", timestamp: nowIso() }],
+  });
+  return id;
+}
+function removeChat(id: string): void {
+  const s = store.get();
+  store.set({ chatLog: s.chatLog.filter((e) => e.id !== id) });
+}
+
 async function callAgent(opts: {
   message?: string;
   answer?: SymptomAnswer;
   forceTriage?: boolean;
+  /** In the chat view we keep screen=chat and render bubbles instead of pages. */
+  chat?: boolean;
 }): Promise<void> {
   const s = store.get();
-  store.set({ screen: opts.answer || opts.forceTriage ? s.screen : "concern", loading: true, error: null });
+  const t = createTranslator(s.lang);
+  const inChat = opts.chat ?? s.screen === "chat";
+
+  if (!inChat) {
+    store.set({ screen: opts.answer || opts.forceTriage ? s.screen : "concern", loading: true, error: null });
+  } else {
+    store.set({ loading: true, error: null });
+  }
+
+  const typingId = inChat ? pushTyping(t) : null;
   try {
     const res = await api.agentMessage({
       userContext: s.userContext,
@@ -87,6 +119,8 @@ async function callAgent(opts: {
       vitalSigns: s.vitalSigns,
       forceTriage: opts.forceTriage,
     });
+
+    if (typingId) removeChat(typingId);
 
     const patch: Partial<AppState> = {
       agentState: res.state,
@@ -99,21 +133,43 @@ async function callAgent(opts: {
     if (res.triage) {
       patch.triage = res.triage;
       patch.summary = res.triage.clinicalSummary;
-      patch.screen = "result";
+      patch.screen = inChat ? "chat" : "result";
       if (res.triage.triageLevel === 3) {
         await ensureEmergencyNumber();
       }
     } else if (res.question) {
-      patch.screen = "questions";
+      patch.screen = inChat ? "chat" : "questions";
     } else if (res.fallback) {
-      patch.screen = "result";
+      patch.screen = inChat ? "chat" : "result";
       patch.error = res.userMessage;
     }
     store.set(patch);
+
+    // In chat mode, turn the agent turn into a bubble (question / result / text).
+    if (inChat) {
+      const kind: ChatEntry["kind"] = res.triage
+        ? "result"
+        : res.question
+          ? "question"
+          : "text";
+      pushChat("agent", res.userMessage, kind);
+      scrollChatToBottom();
+    }
     await refreshAudit();
   } catch (e) {
+    if (typingId) removeChat(typingId);
     handleError(e);
+    if (inChat) {
+      pushChat("agent", store.get().error ?? createTranslator(store.get().lang)("error_generic"), "text");
+    }
   }
+}
+
+function scrollChatToBottom(): void {
+  window.setTimeout(() => {
+    const log = document.getElementById("chat-log");
+    if (log) log.scrollTop = log.scrollHeight;
+  }, 30);
 }
 
 async function ensureEmergencyNumber(): Promise<void> {
@@ -227,15 +283,25 @@ function handleError(e: unknown): void {
 // ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
+function openChat(): void {
+  const s = store.get();
+  const t = createTranslator(s.lang);
+  // Fresh conversation each time the chat is opened from welcome.
+  store.resetAssessment(true);
+  store.set({ screen: "chat" });
+  pushChat("agent", t("chat_greeting"), "text");
+}
+
 const actions: ScreenActions = {
   goTo: (screen) => store.set({ screen, error: null }),
-  startAssessment: () => store.set({ screen: "location", error: null }),
+  startAssessment: () => openChat(),
   runScenario: async (id) => {
     store.resetAssessment(true);
     const sc = DEMO_SCENARIOS[id];
-    store.set({ chiefComplaint: sc.statement, screen: "processing" });
-    // Demo scenarios go straight to triage (force) to show the level quickly.
-    await callAgent({ message: sc.statement, forceTriage: true });
+    // Demo scenarios run inside the chat so judges see the conversation.
+    store.set({ chiefComplaint: sc.statement, screen: "chat" });
+    pushChat("user", sc.statement, "text");
+    await callAgent({ message: sc.statement, forceTriage: true, chat: true });
   },
   setContext: (patch) => {
     const s = store.get();
@@ -250,16 +316,27 @@ const actions: ScreenActions = {
     // Emergency shortcut: begin urgent safety screening immediately.
     const s = store.get();
     const msg = s.chiefComplaint || "I need urgent help. I feel very unwell.";
-    store.set({ chiefComplaint: msg, screen: "processing" });
+    if (s.screen === "chat") pushChat("user", msg, "text");
+    store.set({ chiefComplaint: msg });
+    if (s.screen !== "chat") store.set({ screen: "processing" });
     await callAgent({ message: msg, forceTriage: true });
   },
   answerQuestion: async (answer, skip) => {
     const s = store.get();
     const answers = s.answers.filter((a) => a.questionId !== answer.questionId);
-    if (!skip) answers.push(answer);
-    else answers.push({ ...answer, answer: "Skipped" });
-    store.set({ answers, screen: "processing" });
-    await callAgent({ answer: skip ? { ...answer, answer: "Skipped" } : answer });
+    const finalAnswer = skip ? { ...answer, answer: "Skipped" } : answer;
+    answers.push(finalAnswer);
+    // In chat, echo the chosen answer as a user bubble.
+    if (s.screen === "chat") {
+      const shown = Array.isArray(finalAnswer.answer)
+        ? finalAnswer.answer.join(", ")
+        : String(finalAnswer.answer);
+      pushChat("user", shown, "text");
+      store.set({ answers });
+    } else {
+      store.set({ answers, screen: "processing" });
+    }
+    await callAgent({ answer: finalAnswer });
   },
   editAnswer: (questionId) => {
     const s = store.get();
@@ -271,14 +348,16 @@ const actions: ScreenActions = {
   },
   symptomsChanged: async () => {
     // update_symptoms tool: force reassessment through the agent.
-    store.set({ screen: "processing" });
+    const s = store.get();
+    if (s.screen === "chat") {
+      pushChat("user", createTranslator(s.lang)("symptoms_changed"), "text");
+    } else {
+      store.set({ screen: "processing" });
+    }
     await callAgent({ forceTriage: false });
   },
   createSummary: () => store.set({ screen: "summary" }),
-  startAgain: () => {
-    store.resetAssessment(true);
-    store.set({ screen: "welcome" });
-  },
+  startAgain: () => openChat(),
   findCare: () => store.set({ screen: "summary" }),
   requestAppointment: () => {
     pendingConsent = { kind: "provider" };
@@ -292,7 +371,44 @@ const actions: ScreenActions = {
     const s = store.get();
     const demoText = DEMO_SCENARIOS[1].statement;
     const r = await voiceService.transcribe(s.chiefComplaint || demoText);
-    store.set({ chiefComplaint: r.text });
+    if (s.screen === "chat") {
+      // Put the transcribed text straight into the conversation.
+      pushChat("user", r.text, "text");
+      store.set({ chiefComplaint: s.chiefComplaint || r.text });
+      await callAgent({ message: r.text, chat: true });
+    } else {
+      store.set({ chiefComplaint: r.text });
+    }
+  },
+};
+
+/** Chat-specific actions (superset of ScreenActions). */
+const chatActions: ChatActions = {
+  ...actions,
+  sendMessage: async (text) => {
+    const s = store.get();
+    pushChat("user", text, "text");
+    // The first user message becomes the chief complaint.
+    if (!s.chiefComplaint) store.set({ chiefComplaint: text });
+    scrollChatToBottom();
+    // If a follow-up question is pending and it's free-text/number, treat this
+    // message as the answer to that question; otherwise it's a new message.
+    const q = s.currentQuestion;
+    if (q && (q.answerType === "text" || q.answerType === "number")) {
+      const answer: SymptomAnswer = {
+        questionId: q.questionId,
+        question: q.question,
+        answer: q.answerType === "number" ? Number(text) : text,
+        answeredAt: nowIso(),
+        source: "user",
+      };
+      const answers = s.answers.filter((a) => a.questionId !== q.questionId);
+      answers.push(answer);
+      store.set({ answers });
+      await callAgent({ answer, chat: true });
+    } else {
+      await callAgent({ message: text, chat: true });
+    }
   },
 };
 
@@ -426,6 +542,8 @@ function renderScreen(s: AppState, t: (k: string) => string): HTMLElement {
     }
     case "concern":
       return concernScreen(s, t, actions);
+    case "chat":
+      return chatScreen(s, t, chatActions);
     case "questions":
       return questionsScreen(s, t, actions);
     case "processing":
