@@ -202,10 +202,40 @@ agent loop (emergency vs follow-up).
 
 ## Deployment
 
-The MVP runs as a single Node process (`npm start`). For AWS: put the SPA behind
-CloudFront/S3, map each `/api/*` route to a Lambda behind API Gateway (with WAF +
-throttling), store session/consent/audit in DynamoDB, keep secrets in Secrets
-Manager, and use Bedrock for the orchestrator's language tasks.
+The only build-time dependency is `typescript`; there are no runtime
+dependencies. Build scripts use `npx tsc` so they work whether TypeScript is
+installed locally (via `npm ci`) or globally.
+
+> **Do not set `NODE_ENV=production` *before* the build step.** That makes
+> `npm install` skip devDependencies and removes `typescript`, causing
+> `tsc: command not found`. Install with dev deps and build first.
+
+### Vercel
+
+`vercel.json` is included and configured:
+
+- `buildCommand: npm run vercel-build` compiles the client + server into `dist/`.
+- `outputDirectory: dist/public` serves the static SPA.
+- `/api/*` is rewritten to the serverless function `api/index.js`, which reuses
+  the exact same router and route handlers as the standalone server.
+- All other paths fall back to `index.html` (SPA routing); real static assets
+  (`/js/...`, `/styles.css`) are served directly.
+
+Set `engines.node` to a Vercel-supported major (`20.x`). Just import the repo in
+Vercel — no extra configuration is required.
+
+### Node host / PaaS (Render, Railway, Fly, Heroku) and Docker
+
+```bash
+npm ci && npm run build && npm start   # binds 0.0.0.0:$PORT, health at /api/health
+```
+
+### AWS (target)
+
+Put the SPA behind CloudFront/S3, map each `/api/*` route to a Lambda behind API
+Gateway (with WAF + throttling), store session/consent/audit in DynamoDB, keep
+secrets in Secrets Manager, and use Bedrock for the orchestrator's language
+tasks.
 
 ---
 
