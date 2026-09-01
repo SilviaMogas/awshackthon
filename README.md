@@ -119,9 +119,11 @@ signs, timeframe and whether escalation is required.
 
 ## Installation
 
-Requires **Node.js 18+** (no other dependencies).
+Requires **Node.js 18+**. The only dependency is `typescript` (build-time only);
+there are no runtime dependencies.
 
 ```bash
+npm ci                    # installs the typescript devDependency
 cp .env.example .env      # optional; sensible defaults are built in
 npm run build             # compiles server + client TypeScript, copies static assets
 npm start                 # serves http://localhost:3000
@@ -202,10 +204,44 @@ agent loop (emergency vs follow-up).
 
 ## Deployment
 
-The MVP runs as a single Node process (`npm start`). For AWS: put the SPA behind
-CloudFront/S3, map each `/api/*` route to a Lambda behind API Gateway (with WAF +
-throttling), store session/consent/audit in DynamoDB, keep secrets in Secrets
-Manager, and use Bedrock for the orchestrator's language tasks.
+The app builds with TypeScript and runs as a single Node process. The only
+build-time dependency is `typescript`; there are **no runtime dependencies**.
+
+### Any Node host / PaaS (Render, Railway, Fly, Heroku, etc.)
+
+```bash
+npm ci          # installs the typescript devDependency (from package-lock.json)
+npm run build   # compiles server + client, copies static assets to dist/
+npm start       # runs node dist/server/index.js, binds 0.0.0.0:$PORT
+```
+
+- The server reads `PORT` and `HOST` from the environment (platforms inject
+  `PORT`); it binds `0.0.0.0` by default. Health check: `GET /api/health`.
+- A `Procfile` (`web: node dist/server/index.js`) and a `render.yaml` blueprint
+  are included.
+
+> **Important — do not set `NODE_ENV=production` *before* the build step.** Some
+> platforms do this, which makes `npm install` skip devDependencies and removes
+> `typescript`, breaking `npm run build` with `tsc: not found`. Install with dev
+> deps (`npm ci`) and build first, then set production. The included `Dockerfile`
+> and `render.yaml` already do this correctly.
+
+### Docker
+
+```bash
+docker build -t health-response-agent .
+docker run -p 3000:3000 health-response-agent
+```
+
+The multi-stage `Dockerfile` installs devDependencies and builds in the first
+stage, then ships only the compiled `dist/` in a slim runtime image.
+
+### AWS (target architecture)
+
+Put the SPA behind CloudFront/S3, map each `/api/*` route to a Lambda behind API
+Gateway (with WAF + throttling), store session/consent/audit in DynamoDB, keep
+secrets in Secrets Manager, and use Bedrock for the orchestrator's language
+tasks. See the Mermaid diagram above.
 
 ---
 
