@@ -9,6 +9,8 @@ export interface ElProps {
   value?: string;
   placeholder?: string;
   href?: string;
+  src?: string;
+  alt?: string;
   role?: string;
   disabled?: boolean;
   checked?: boolean;
@@ -16,6 +18,7 @@ export interface ElProps {
   for?: string;
   ariaLabel?: string;
   ariaLive?: string;
+  ariaHidden?: string;
   dataset?: Record<string, string>;
   style?: string;
   html?: string;
@@ -37,11 +40,14 @@ export function el(
   if (props.value !== undefined) (node as HTMLInputElement).value = props.value;
   if (props.placeholder) node.setAttribute("placeholder", props.placeholder);
   if (props.href) node.setAttribute("href", props.href);
+  if (props.src) node.setAttribute("src", props.src);
+  if (props.alt !== undefined) node.setAttribute("alt", props.alt);
   if (props.role) node.setAttribute("role", props.role);
   if (props.name) node.setAttribute("name", props.name);
   if (props.for) node.setAttribute("for", props.for);
   if (props.ariaLabel) node.setAttribute("aria-label", props.ariaLabel);
   if (props.ariaLive) node.setAttribute("aria-live", props.ariaLive);
+  if (props.ariaHidden) node.setAttribute("aria-hidden", props.ariaHidden);
   if (props.style) node.setAttribute("style", props.style);
   if (props.disabled) (node as HTMLButtonElement).disabled = true;
   if (props.checked) (node as HTMLInputElement).checked = true;

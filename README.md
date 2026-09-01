@@ -1,12 +1,24 @@
 # Health Response Agent
 
-**Clear guidance when you need to know what to do next.**
+**Clear action when every minute matters.**
 
 Health Response Agent is an action-oriented **AI health response agent** (not a
 chatbot). It collects relevant context, detects possible emergency warning
 signs, calls a clinical triage service to determine the appropriate response
 level, produces a structured medical handoff, requests consent before sensitive
 actions, executes permitted actions, and monitors their status.
+
+## Brand system
+
+- **Slogan:** “Clear action when every minute matters.”
+- **Primary:** Response Navy `#071B2E`
+- **Action:** Signal Cyan `#25D0C8`
+- **24-hour attention:** Amber `#FFB547`
+- **Urgent escalation:** Coral `#F15B5D`
+- **Logo assets:** `src/client/public/logo.svg` and `brandmark.svg`
+
+The circular signal represents an active response loop and a clear point of
+action. Coral is reserved for Level 3 and safety-critical failure states.
 
 > ⚠️ This service provides general health guidance and does **not** replace a
 > qualified healthcare professional. It does not diagnose. If you believe you

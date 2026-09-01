@@ -10,7 +10,8 @@ type Dict = Record<string, string>;
 
 const EN: Dict = {
   app_name: "Health Response Agent",
-  subheading: "Clear guidance when you need to know what to do next.",
+  slogan: "Clear action when every minute matters.",
+  subheading: "Clear action when every minute matters.",
   safety_notice:
     "This service provides general health guidance and does not replace a qualified healthcare professional. If you believe you are in immediate danger, contact local emergency services now.",
   start_assessment: "Start health assessment",
@@ -112,7 +113,8 @@ const EN: Dict = {
 
 const AR: Dict = {
   app_name: "وكيل الاستجابة الصحية",
-  subheading: "إرشاد واضح عندما تحتاج إلى معرفة الخطوة التالية.",
+  slogan: "إجراء واضح عندما تكون كل دقيقة مهمة.",
+  subheading: "إجراء واضح عندما تكون كل دقيقة مهمة.",
   safety_notice:
     "تقدم هذه الخدمة إرشادات صحية عامة ولا تحل محل أخصائي رعاية صحية مؤهل. إذا كنت تعتقد أنك في خطر فوري، فاتصل بخدمات الطوارئ المحلية الآن.",
   start_assessment: "ابدأ التقييم الصحي",
