@@ -35,7 +35,24 @@ export type Screen =
   | "processing"
   | "result"
   | "summary"
-  | "privacy";
+  | "privacy"
+  | "chat";
+
+/** A single bubble in the conversational chat view. */
+export interface ChatEntry {
+  id: string;
+  role: "user" | "agent";
+  /**
+   * How the agent bubble should render:
+   * - text: plain agent/user message
+   * - question: agent asked a follow-up (quick-reply buttons rendered)
+   * - result: agent produced a triage result (level card rendered)
+   * - typing: transient "agent is typing" placeholder
+   */
+  kind: "text" | "question" | "result" | "typing";
+  content: string;
+  timestamp: string;
+}
 
 export interface AppState {
   screen: Screen;
@@ -44,6 +61,7 @@ export interface AppState {
   simulatedDemoLabel: boolean;
   userContext: UserContext;
   messages: AgentMessage[];
+  chatLog: ChatEntry[];
   agentState: AgentState;
   transitions: { from: AgentState; to: AgentState; at: string }[];
   chiefComplaint: string;
@@ -121,6 +139,7 @@ export function initialState(): AppState {
       consentTimestamps: {},
     },
     messages: [],
+    chatLog: [],
     agentState: "idle",
     transitions: [],
     chiefComplaint: "",

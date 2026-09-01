@@ -76,12 +76,17 @@ export function appHeader(
     el(
       "div",
       { class: "brand" },
-      el("div", { class: "logo" }, "+"),
+      el("img", {
+        class: "logo",
+        src: "/brandmark.svg",
+        alt: "",
+        ariaHidden: "true",
+      }),
       el(
         "div",
         {},
         el("h1", {}, t("app_name")),
-        el("p", { class: "sub" }, t("subheading")),
+        el("p", { class: "sub" }, t("slogan")),
       ),
     ),
     el("div", { class: "controls" }, ...controls),

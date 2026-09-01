@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 112" role="img" aria-labelledby="title desc">
+  <title id="title">Health Response Agent</title>
+  <desc id="desc">Health Response Agent wordmark with circular signal.</desc>
+  <circle cx="56" cy="56" r="50" fill="#071B2E"/>
+  <circle cx="56" cy="56" r="31" fill="none" stroke="#25D0C8" stroke-width="11"/>
+  <circle cx="56" cy="56" r="7" fill="#A8F2ED"/>
+  <text x="126" y="51" fill="#071B2E" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="750">Health Response</text>
+  <text x="126" y="88" fill="#071B2E" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="750">Agent</text>
+</svg>

@@ -10,7 +10,8 @@ type Dict = Record<string, string>;
 
 const EN: Dict = {
   app_name: "Health Response Agent",
-  subheading: "Clear guidance when you need to know what to do next.",
+  slogan: "Clear action when every minute matters.",
+  subheading: "Clear action when every minute matters.",
   safety_notice:
     "This service provides general health guidance and does not replace a qualified healthcare professional. If you believe you are in immediate danger, contact local emergency services now.",
   start_assessment: "Start health assessment",
@@ -108,11 +109,20 @@ const EN: Dict = {
   not_real_action:
     "This is a simulated action. No real medical team has been contacted.",
   new_assessment: "Start a new assessment",
+  chat_placeholder: "Describe what is happening to you…",
+  chat_send: "Send",
+  chat_greeting:
+    "Hi, I'm your Health Response Agent. Tell me what is happening and what you are feeling right now, and I'll help you work out the safest next step.",
+  chat_agent_typing: "Assistant is typing…",
+  open_chat: "Describe your symptoms",
+  yes: "Yes",
+  no: "No",
 };
 
 const AR: Dict = {
   app_name: "وكيل الاستجابة الصحية",
-  subheading: "إرشاد واضح عندما تحتاج إلى معرفة الخطوة التالية.",
+  slogan: "إجراء واضح عندما تكون كل دقيقة مهمة.",
+  subheading: "إجراء واضح عندما تكون كل دقيقة مهمة.",
   safety_notice:
     "تقدم هذه الخدمة إرشادات صحية عامة ولا تحل محل أخصائي رعاية صحية مؤهل. إذا كنت تعتقد أنك في خطر فوري، فاتصل بخدمات الطوارئ المحلية الآن.",
   start_assessment: "ابدأ التقييم الصحي",
@@ -208,6 +218,14 @@ const AR: Dict = {
   simulated_label: "محاكاة",
   not_real_action: "هذا إجراء محاكى. لم يتم التواصل مع أي فريق طبي حقيقي.",
   new_assessment: "ابدأ تقييمًا جديدًا",
+  chat_placeholder: "صف ما الذي يحدث لك…",
+  chat_send: "إرسال",
+  chat_greeting:
+    "مرحبًا، أنا وكيل الاستجابة الصحية. أخبرني بما يحدث وبما تشعر الآن، وسأساعدك على تحديد الخطوة التالية الأكثر أمانًا.",
+  chat_agent_typing: "المساعد يكتب…",
+  open_chat: "صف الأعراض",
+  yes: "نعم",
+  no: "لا",
 };
 
 const DICTS: Record<Lang, Dict> = { en: EN, ar: AR };

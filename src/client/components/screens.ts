@@ -42,9 +42,23 @@ export function welcomeScreen(
     state.demoMode ? el("div", { class: "center" }, demoBadge(t)) : false,
     el(
       "div",
-      { class: "card stack" },
-      el("h2", {}, t("app_name")),
-      el("p", { class: "muted" }, t("welcome_intro")),
+      { class: "welcome-hero" },
+      el(
+        "div",
+        { class: "welcome-copy" },
+        el("p", { class: "eyebrow" }, "AI HEALTH RESPONSE AGENT"),
+        el("h2", {}, t("slogan")),
+        el("p", { class: "hero-intro" }, t("welcome_intro")),
+      ),
+      el(
+        "div",
+        { class: "signal-visual", ariaHidden: "true" },
+        el("img", { src: "/brandmark.svg", alt: "" }),
+      ),
+    ),
+    el(
+      "div",
+      { class: "card stack assessment-card" },
       safetyNotice(t),
       el("button", { class: "btn", onclick: a.startAssessment }, t("start_assessment")),
       state.demoMode
