@@ -340,10 +340,17 @@ const actions: ScreenActions = {
     const answers = s.answers.filter((a) => a.questionId !== answer.questionId);
     const finalAnswer = skip ? { ...answer, answer: "Skipped" } : answer;
     answers.push(finalAnswer);
-    // Echo the chosen answer as a user bubble in the conversation.
-    const shown = Array.isArray(finalAnswer.answer)
-      ? finalAnswer.answer.join(", ")
-      : String(finalAnswer.answer);
+    // Echo the chosen answer as a user bubble in the conversation, formatted
+    // for humans (booleans -> Yes/No, arrays -> comma list).
+    const t = createTranslator(s.lang);
+    let shown: string;
+    if (typeof finalAnswer.answer === "boolean") {
+      shown = finalAnswer.answer ? t("yes") : t("no");
+    } else if (Array.isArray(finalAnswer.answer)) {
+      shown = finalAnswer.answer.join(", ");
+    } else {
+      shown = String(finalAnswer.answer);
+    }
     pushChat("user", shown, "text");
     store.set({ answers });
     await callAgent({ answer: finalAnswer, chat: true });
@@ -526,6 +533,11 @@ function render(s: AppState): void {
     tech ?? el("div", { class: "hidden" }),
     el("footer", { class: "footer" }, `${t("app_name")} · ${s.demoMode ? t("demo_badge") : "live"} · policy ${s.policyVersion}`),
   );
+
+  // Remove any previously-mounted consent modal before (re)adding the current
+  // one. Without this, every re-render (e.g. ticking a consent box) would stack
+  // a new overlay on top of a stale one, so the visible modal looked frozen.
+  document.querySelectorAll(".overlay").forEach((n) => n.remove());
   if (modal) document.body.appendChild(modal);
 }
 
