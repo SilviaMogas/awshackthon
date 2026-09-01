@@ -1,0 +1,179 @@
+{
+  "dataset_metadata": {
+    "model_target": "AI Triage and Routing (Kiro)",
+    "description": "Synthetic healthcare triage data for severity classification",
+    "total_records": 5
+  },
+  "triage_records": [
+    {
+      "record_id": "TR-1001",
+      "patient_details": {
+        "patient_id": "P-9843",
+        "full_name": "Tariq Al-Mansour",
+        "age": 29,
+        "gender": "Male",
+        "contact_number": "+966-50-111-2222",
+        "symptoms": ["Mild headache", "Occasional dry cough", "Fatigue"],
+        "duration_of_symptoms_days": 2,
+        "vital_signs": {
+          "temperature_celsius": 37.2,
+          "blood_pressure": "120/80",
+          "heart_rate_bpm": 72,
+          "oxygen_saturation_pct": 98
+        }
+      },
+      "clinical_routing": {
+        "department": "General Medicine / Virtual Care",
+        "assigned_doctor": {
+          "doctor_id": "DOC-204",
+          "name": "Dr. Sarah Rahman",
+          "specialty": "Family Medicine",
+          "availability": "On-Call"
+        }
+      },
+      "ai_severity_assessment": {
+        "severity_level": 1,
+        "severity_description": "Not urgent can be cured in home.",
+        "model_action": "Generate self-care instructions. Prescribe rest and over-the-counter hydration.",
+        "requires_human_agent": false,
+        "requires_gov_alert": false
+      }
+    },
+    {
+      "record_id": "TR-1002",
+      "patient_details": {
+        "patient_id": "P-9844",
+        "full_name": "Aisha Khan",
+        "age": 54,
+        "gender": "Female",
+        "contact_number": "+966-55-333-4444",
+        "symptoms": ["Persistent abdominal pain", "Nausea", "Dizziness upon standing"],
+        "duration_of_symptoms_days": 4,
+        "vital_signs": {
+          "temperature_celsius": 38.1,
+          "blood_pressure": "145/95",
+          "heart_rate_bpm": 95,
+          "oxygen_saturation_pct": 96
+        }
+      },
+      "clinical_routing": {
+        "department": "Gastroenterology / Outpatient",
+        "assigned_doctor": {
+          "doctor_id": "DOC-312",
+          "name": "Dr. Khalid Al-Dosari",
+          "specialty": "Gastroenterologist",
+          "availability": "Available for Agent Handoff"
+        }
+      },
+      "ai_severity_assessment": {
+        "severity_level": 2,
+        "severity_description": "Connect to agent of the hospital.",
+        "model_action": "Escalate chat to a live hospital triage nurse for immediate consultation and appointment booking.",
+        "requires_human_agent": true,
+        "requires_gov_alert": false
+      }
+    },
+    {
+      "record_id": "TR-1003",
+      "patient_details": {
+        "patient_id": "P-9845",
+        "full_name": "Fahad Youssef",
+        "age": 41,
+        "gender": "Male",
+        "contact_number": "+966-59-555-6666",
+        "symptoms": ["Severe respiratory distress", "High fever", "Loss of taste", "Coughing up blood"],
+        "duration_of_symptoms_days": 1,
+        "vital_signs": {
+          "temperature_celsius": 40.2,
+          "blood_pressure": "90/60",
+          "heart_rate_bpm": 125,
+          "oxygen_saturation_pct": 84
+        }
+      },
+      "clinical_routing": {
+        "department": "Emergency Medicine / Infectious Disease Isolation",
+        "assigned_doctor": {
+          "doctor_id": "DOC-901",
+          "name": "Dr. Fatima Al-Zahrani",
+          "specialty": "Infectious Disease & Pulmonology",
+          "availability": "Emergency Room (ER)"
+        }
+      },
+      "ai_severity_assessment": {
+        "severity_level": 3,
+        "severity_description": "High severity where in we need to connect to Government authority to alert about the severity.",
+        "model_action": "Dispatch emergency services immediately. Auto-trigger API payload to Ministry of Health (MOH) disease surveillance system.",
+        "requires_human_agent": true,
+        "requires_gov_alert": true
+      }
+    },
+    {
+      "record_id": "TR-1004",
+      "patient_details": {
+        "patient_id": "P-9846",
+        "full_name": "Omar Tariq",
+        "age": 12,
+        "gender": "Male",
+        "contact_number": "+966-50-777-8888",
+        "symptoms": ["Skin rash", "Mild itching", "No fever"],
+        "duration_of_symptoms_days": 3,
+        "vital_signs": {
+          "temperature_celsius": 36.8,
+          "blood_pressure": "110/70",
+          "heart_rate_bpm": 80,
+          "oxygen_saturation_pct": 99
+        }
+      },
+      "clinical_routing": {
+        "department": "Pediatrics / Dermatology",
+        "assigned_doctor": {
+          "doctor_id": "DOC-118",
+          "name": "Dr. Laila Hassan",
+          "specialty": "Pediatrician",
+          "availability": "Offline"
+        }
+      },
+      "ai_severity_assessment": {
+        "severity_level": 1,
+        "severity_description": "Not urgent can be cured in home.",
+        "model_action": "Provide home care guidelines for mild allergic reactions. Suggest over-the-counter antihistamines.",
+        "requires_human_agent": false,
+        "requires_gov_alert": false
+      }
+    },
+    {
+      "record_id": "TR-1005",
+      "patient_details": {
+        "patient_id": "P-9847",
+        "full_name": "Noura Al-Saud",
+        "age": 68,
+        "gender": "Female",
+        "contact_number": "+966-53-999-0000",
+        "symptoms": ["Chest tightness", "Shortness of breath radiating to left arm", "Sweating"],
+        "duration_of_symptoms_days": 0,
+        "vital_signs": {
+          "temperature_celsius": 37.0,
+          "blood_pressure": "160/100",
+          "heart_rate_bpm": 110,
+          "oxygen_saturation_pct": 92
+        }
+      },
+      "clinical_routing": {
+        "department": "Cardiology / Intensive Care Unit (ICU)",
+        "assigned_doctor": {
+          "doctor_id": "DOC-405",
+          "name": "Dr. Majed Abdullah",
+          "specialty": "Cardiologist",
+          "availability": "Emergency Room (ER)"
+        }
+      },
+      "ai_severity_assessment": {
+        "severity_level": 3,
+        "severity_description": "High severity where in we need to connect to Government authority to alert about the severity.",
+        "model_action": "Suspected acute myocardial infarction (heart attack). Alert Red Crescent/Emergency Responders immediately for ambulance dispatch.",
+        "requires_human_agent": true,
+        "requires_gov_alert": true
+      }
+    }
+  ]
+}
