@@ -8,6 +8,10 @@ signs, calls a clinical triage service to determine the appropriate response
 level, produces a structured medical handoff, requests consent before sensitive
 actions, executes permitted actions, and monitors their status.
 
+📐 **Architecture diagrams:** see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+— AWS target architecture, MVP implementation, the agent state machine, and the
+Level 3 consent/escalation sequence (rendered inline on GitHub).
+
 ## Brand system
 
 - **Slogan:** “Clear action when every minute matters.”
@@ -104,6 +108,9 @@ demo runs offline with no package installation:
 > endpoints" below.
 
 ### AWS architecture (target)
+
+> Full diagrams (AWS, MVP, agent state machine, escalation sequence) live in
+> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ```mermaid
 flowchart TD
