@@ -1,0 +1,16 @@
+# Render.com blueprint for the Health Response Agent.
+services:
+  - type: web
+    name: health-response-agent
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: node dist/server/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PUBLIC_DEMO_MODE
+        value: "true"
+      - key: SERVICE_MODE
+        value: mock
