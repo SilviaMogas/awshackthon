@@ -132,6 +132,21 @@ function safeErrString(err: unknown): string {
 }
 
 export async function readJsonBody(req: IncomingMessage): Promise<unknown> {
+  // Some serverless platforms (e.g. Vercel) pre-parse the request body and
+  // consume the stream. If a parsed body is already present, use it directly
+  // to avoid hanging on a stream that will never emit "data"/"end".
+  const pre = (req as unknown as { body?: unknown }).body;
+  if (pre !== undefined && pre !== null) {
+    if (typeof pre === "string") {
+      if (!pre) return {};
+      try {
+        return JSON.parse(pre);
+      } catch {
+        throw new ServiceError("INVALID_REQUEST", "Invalid JSON body");
+      }
+    }
+    return pre;
+  }
   return new Promise((resolve, reject) => {
     const chunks: string[] = [];
     let size = 0;
