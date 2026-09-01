@@ -141,7 +141,10 @@ export function chatScreen(
     ariaLabel: t("chat_placeholder"),
   }) as HTMLInputElement;
 
+  if (s.loading) input.disabled = true;
+
   const send = (): void => {
+    if (s.loading) return;
     const text = input.value.trim();
     if (!text) return;
     input.value = "";
@@ -162,18 +165,35 @@ export function chatScreen(
       {
         class: "chat-voice",
         ariaLabel: t("voice_input"),
-        onclick: a.voiceInput,
+        disabled: s.loading,
+        onclick: () => {
+          if (!s.loading) a.voiceInput();
+        },
       },
       "🎤",
     ),
     input,
-    el("button", { class: "chat-send", ariaLabel: t("chat_send"), onclick: send }, "➤"),
+    el(
+      "button",
+      { class: "chat-send", ariaLabel: t("chat_send"), disabled: s.loading, onclick: send },
+      "➤",
+    ),
   );
 
-  // Auto-scroll the transcript to the newest content after render.
+  // Auto-scroll after render. For an emergency (Level 3) result, scroll so the
+  // TOP of the result card — where the "call now" number lives — is visible,
+  // rather than the bottom of the transcript. For everything else, scroll to
+  // the newest content as usual.
   window.setTimeout(() => {
     const l = document.getElementById("chat-log");
-    if (l) l.scrollTop = l.scrollHeight;
+    if (!l) return;
+    const emergency = s.triage?.triageLevel === 3;
+    const card = l.querySelector(".chat-result") as HTMLElement | null;
+    if (emergency && card) {
+      l.scrollTop = Math.max(0, card.offsetTop - l.offsetTop - 8);
+    } else {
+      l.scrollTop = l.scrollHeight;
+    }
   }, 30);
 
   return el(
