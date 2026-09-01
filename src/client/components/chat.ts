@@ -105,26 +105,32 @@ export function chatScreen(
   t: (k: string) => string,
   a: ChatActions,
 ): HTMLElement {
-  const log = el(
-    "div",
-    { class: "chat-log", id: "chat-log", ariaLive: "polite" },
-    ...s.chatLog.map(bubble),
-  );
-
-  // If the last agent turn was a question, show quick replies under the log.
+  // Quick replies for a pending follow-up question (none once triage is done).
   const lastEntry = s.chatLog[s.chatLog.length - 1];
   const showQuick =
     !s.loading &&
+    !s.triage &&
     lastEntry &&
     lastEntry.role === "agent" &&
     lastEntry.kind === "question" &&
     s.currentQuestion;
   const quick = showQuick ? quickReplies(s.currentQuestion as FollowUpQuestion, t, a) : false;
 
-  // If triage is complete, embed the result card at the end of the transcript.
-  const showResult =
-    !s.loading && s.screen === "chat" && s.triage && lastEntry && lastEntry.kind === "result";
+  // If triage is complete, always embed the result card (guidance, warning
+  // signs, emergency number / escalation). This is safety-critical for Level 3,
+  // so it must not depend on which bubble happens to be last in the transcript.
+  const showResult = !s.loading && s.triage !== null;
   const result = showResult ? resultCard(s, t, a) : false;
+
+  // The transcript scrolls; quick replies and the result card live INSIDE it so
+  // they are always visible in the conversation (not below the fold).
+  const log = el(
+    "div",
+    { class: "chat-log", id: "chat-log", ariaLive: "polite" },
+    ...s.chatLog.map(bubble),
+    quick || el("div", { class: "hidden" }),
+    result || el("div", { class: "hidden" }),
+  );
 
   const input = el("input", {
     class: "chat-input",
@@ -163,13 +169,17 @@ export function chatScreen(
     el("button", { class: "chat-send", ariaLabel: t("chat_send"), onclick: send }, "➤"),
   );
 
+  // Auto-scroll the transcript to the newest content after render.
+  window.setTimeout(() => {
+    const l = document.getElementById("chat-log");
+    if (l) l.scrollTop = l.scrollHeight;
+  }, 30);
+
   return el(
     "div",
     { class: "chat-screen" },
     safetyNotice(t),
     log,
-    quick || el("div", { class: "hidden" }),
-    result || el("div", { class: "hidden" }),
     composer,
   );
 }
