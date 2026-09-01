@@ -333,3 +333,9 @@ details.prev .pa:last-child { border-bottom: none; }
 .chat-voice { background: var(--surface); color: var(--primary); border-color: var(--border); }
 .chat-voice:hover { background: var(--surface-2); }
 [dir="rtl"] .chat-send { transform: scaleX(-1); }
+
+
+/* Quick-reply action bar (below the transcript, above the composer) */
+.quick-bar { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0; }
+.quick-bar .chip { background: var(--surface); }
+.quick-bar .chip.ghost { color: var(--text-muted); }

@@ -122,13 +122,14 @@ export function chatScreen(
   const showResult = !s.loading && s.triage !== null;
   const result = showResult ? resultCard(s, t, a) : false;
 
-  // The transcript scrolls; quick replies and the result card live INSIDE it so
-  // they are always visible in the conversation (not below the fold).
+  // The transcript scrolls. The result card lives INSIDE it (it is part of the
+  // conversation and must stay visible for Level 3). Quick-reply chips are a
+  // separate action bar below the log so they don't scroll away or leak into
+  // the transcript text.
   const log = el(
     "div",
     { class: "chat-log", id: "chat-log", ariaLive: "polite" },
     ...s.chatLog.map(bubble),
-    quick || el("div", { class: "hidden" }),
     result || el("div", { class: "hidden" }),
   );
 
@@ -180,6 +181,7 @@ export function chatScreen(
     { class: "chat-screen" },
     safetyNotice(t),
     log,
+    quick ? el("div", { class: "quick-bar" }, quick) : el("div", { class: "hidden" }),
     composer,
   );
 }
