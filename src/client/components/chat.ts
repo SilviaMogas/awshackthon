@@ -15,7 +15,7 @@ import { safetyNotice } from "./common.js";
 import { levelOneResult, levelTwoResult, ScreenActions } from "./screens.js";
 import { levelThreeResult } from "./level3.js";
 import { providerContactResult } from "./consent.js";
-import { ICON_MIC, ICON_SEND } from "../icons.js";
+import { iconMic, iconSend } from "../icons.js";
 
 export interface ChatActions extends ScreenActions {
   sendMessage: (text: string) => void;
@@ -161,23 +161,24 @@ export function chatScreen(
   const composer = el(
     "div",
     { class: "chat-composer" },
-    el("button", {
-      class: "chat-voice",
-      ariaLabel: t("voice_input"),
-      disabled: s.loading,
-      onclick: () => {
-        if (!s.loading) a.voiceInput();
+    el(
+      "button",
+      {
+        class: "chat-voice",
+        ariaLabel: t("voice_input"),
+        disabled: s.loading,
+        onclick: () => {
+          if (!s.loading) a.voiceInput();
+        },
       },
-      html: ICON_MIC,
-    }),
+      iconMic(),
+    ),
     input,
-    el("button", {
-      class: "chat-send",
-      ariaLabel: t("chat_send"),
-      disabled: s.loading,
-      onclick: send,
-      html: ICON_SEND,
-    }),
+    el(
+      "button",
+      { class: "chat-send", ariaLabel: t("chat_send"), disabled: s.loading, onclick: send },
+      iconSend(),
+    ),
   );
 
   // Auto-scroll after render. For an emergency (Level 3) result, scroll so the

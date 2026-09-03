@@ -9,7 +9,7 @@
  */
 import { el } from "../dom.js";
 import type { AppState } from "../store.js";
-import { ICON_CODE } from "../icons.js";
+import { iconCode } from "../icons.js";
 
 interface Trace {
   tool?: string;
@@ -30,7 +30,7 @@ export function technicalPanel(state: AppState, t: (k: string) => string): HTMLE
   return el(
     "section",
     { class: "tech", ariaLabel: t("technical_view") },
-    el("h3", { class: "tech-title" }, el("span", { html: ICON_CODE }), t("technical_view")),
+    el("h3", { class: "tech-title" }, el("span", {}, iconCode()), t("technical_view")),
     el(
       "dl",
       { class: "kv" },
