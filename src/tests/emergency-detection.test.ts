@@ -2,30 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { emergencyScreeningService } from "../services/emergency-screening/index.js";
 import { triageService } from "../services/triage/index.js";
-import type { TriageRequest, UserContext } from "../shared/types.js";
+import { makeTriageRequest } from "./test-helpers.js";
 
-function ctx(): UserContext {
-  return {
-    sessionId: "emg-" + Math.random().toString(36).slice(2),
-    language: "en",
-    country: "SA",
-    healthDataSharingConsent: false,
-    locationSharingConsent: false,
-    providerContactConsent: false,
-  };
-}
-
-function req(chiefComplaint: string): TriageRequest {
-  return {
-    sessionId: ctx().sessionId,
-    userContext: ctx(),
-    chiefComplaint,
-    messages: [],
-    answers: [],
-    availableVitalSigns: [],
-    submittedAt: new Date().toISOString(),
-  };
-}
+const req = (chiefComplaint: string) => makeTriageRequest(chiefComplaint, "emg");
 
 /**
  * Safety-critical: these phrases describe medical emergencies and MUST be

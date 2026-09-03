@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { sanitizeForPanel, isRegisteredTool } from "../agent/tools.js";
 import { step } from "../agent/orchestrator.js";
-import type { UserContext } from "../shared/types.js";
+import { makeUserContext } from "./test-helpers.js";
 
 test("technical panel sanitisation redacts sensitive fields", () => {
   const out = sanitizeForPanel({
@@ -25,16 +25,7 @@ test("only registered tools are recognised", () => {
   assert.equal(isRegisteredTool("delete_database"), false);
 });
 
-function ctx(): UserContext {
-  return {
-    sessionId: "agent-" + Math.random().toString(36).slice(2),
-    language: "en",
-    country: "SA",
-    healthDataSharingConsent: false,
-    locationSharingConsent: false,
-    providerContactConsent: false,
-  };
-}
+const ctx = () => makeUserContext("agent");
 
 test("agent loop: chest pressure message triggers emergency interrupt and Level 3", async () => {
   const userContext = ctx();
