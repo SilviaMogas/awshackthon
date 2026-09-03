@@ -23,57 +23,109 @@ export interface EmergencyScreeningService {
   readonly mode: "mock" | "real";
 }
 
-/** Red-flag phrases grouped by signal. Matched case-insensitively. */
+/**
+ * Red-flag phrases grouped by signal. Matched case-insensitively against the
+ * combined user text. Patterns are intentionally permissive: this is a
+ * conservative safety net whose job is to interrupt the questionnaire and send
+ * the user to emergency guidance. It is better to over-trigger than to keep
+ * asking follow-up questions to someone who is seriously unwell.
+ *
+ * `cannot`/`can't`/`can not` and similar contractions are all covered.
+ */
+const CANNOT = "(can'?t|can\\s?not|cannot|unable to|couldn'?t)";
+
 const RED_FLAGS: { signal: string; patterns: RegExp[] }[] = [
   {
     signal: "Chest pain or pressure",
-    patterns: [/chest (pain|pressure|tight)/i, /pressure in (my |the )?chest/i],
+    patterns: [
+      /chest (pain|pressure|tight|tightness|discomfort)/i,
+      /(pain|pressure|tight\w*) in (my |the )?chest/i,
+      /heart attack/i,
+    ],
   },
   {
     signal: "Difficulty breathing",
     patterns: [
-      /(difficulty|trouble|hard|struggl\w*) (to )?breath\w*/i,
-      /can'?t breathe/i,
+      /(difficulty|trouble|hard|struggl\w*|problems?) (to |with )?breath\w*/i,
+      new RegExp(`${CANNOT} breath`, "i"),
+      /can'?t catch my breath/i,
       /short(ness)? of breath/i,
+      /out of breath/i,
       /gasping/i,
+      /choking/i,
+      /suffocat\w*/i,
     ],
   },
   {
     signal: "Signs of stroke",
     patterns: [
-      /face (droop|drooping)/i,
-      /slurred speech/i,
-      /sudden (weakness|numbness)/i,
-      /can'?t (move|feel) (my )?(arm|leg|side)/i,
+      /face (is )?(droop|drooping|numb)/i,
+      /(one side|half) of my (face|body)/i,
+      /slurr\w* speech/i,
+      new RegExp(`${CANNOT} speak`, "i"),
+      /sudden(ly)? (weak|weakness|numb|numbness)/i,
+      new RegExp(`${CANNOT} (move|feel) (my )?(arm|leg|side|face)`, "i"),
+      /\bstroke\b/i,
     ],
   },
   {
     signal: "Severe bleeding",
-    patterns: [/(severe|heavy|uncontrolled) bleeding/i, /bleeding (that )?won'?t stop/i],
+    patterns: [
+      /(severe|heavy|heavily|uncontrolled|a lot of|lots of|profuse) bleed\w*/i,
+      /bleed\w* (heavily|badly|a lot)/i,
+      /bleeding (that )?(won'?t|will not|does not|doesn'?t) stop/i,
+      /losing a lot of blood/i,
+    ],
   },
   {
     signal: "Loss of consciousness",
-    patterns: [/(passed out|fainted|unconscious|unresponsive|blacked out)/i],
+    patterns: [
+      /(passed out|pass out|fainted|faint\w*|unconscious|unresponsive|blacked out|black out|collaps\w*)/i,
+      /about to (faint|pass out)/i,
+    ],
   },
   {
     signal: "Sudden severe headache",
-    patterns: [/(worst|sudden severe) headache/i, /thunderclap/i],
+    patterns: [
+      /(worst|sudden severe|sudden and severe) headache/i,
+      /worst headache of my life/i,
+      /thunderclap/i,
+    ],
   },
   {
     signal: "Anaphylaxis / severe allergic reaction",
-    patterns: [/anaphyla/i, /throat (closing|swelling)/i, /face swelling/i],
+    patterns: [
+      /anaphyla\w*/i,
+      /(severe )?allergic reaction/i,
+      /throat (is )?(closing|swelling|tight)/i,
+      /(face|lip|tongue) (is )?swell\w*/i,
+      new RegExp(`${CANNOT} swallow`, "i"),
+    ],
   },
   {
-    signal: "Sweating with cardiac symptoms",
-    patterns: [/cold sweat/i, /sweating/i],
+    signal: "Cardiac-associated symptoms",
+    patterns: [/cold sweat/i, /breaking out in a sweat/i],
   },
   {
     signal: "Confusion or disorientation",
-    patterns: [/(sudden )?confus\w*/i, /disorient\w*/i],
+    patterns: [/(sudden(ly)? )?confus\w*/i, /disorient\w*/i, /(can'?t|cannot) think straight/i],
+  },
+  {
+    signal: "Seizure",
+    patterns: [/seizure/i, /convuls\w*/i, /fit\w* and shaking/i],
+  },
+  {
+    signal: "Poisoning or overdose",
+    patterns: [/overdose/i, /took too many (pills|tablets)/i, /poison\w*/i, /swallowed (bleach|chemical)/i],
   },
   {
     signal: "Suicidal or self-harm intent",
-    patterns: [/(kill myself|end my life|suicid\w*|harm myself)/i],
+    patterns: [
+      /(kill myself|end my life|suicid\w*|harm myself|hurt myself)/i,
+      /want to die/i,
+      /don'?t want to (live|be here)/i,
+      /take my (own )?life/i,
+    ],
   },
 ];
 

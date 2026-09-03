@@ -15,6 +15,7 @@ import { safetyNotice } from "./common.js";
 import { levelOneResult, levelTwoResult, ScreenActions } from "./screens.js";
 import { levelThreeResult } from "./level3.js";
 import { providerContactResult } from "./consent.js";
+import { iconMic, iconSend } from "../icons.js";
 
 export interface ChatActions extends ScreenActions {
   sendMessage: (text: string) => void;
@@ -105,26 +106,33 @@ export function chatScreen(
   t: (k: string) => string,
   a: ChatActions,
 ): HTMLElement {
-  const log = el(
-    "div",
-    { class: "chat-log", id: "chat-log", ariaLive: "polite" },
-    ...s.chatLog.map(bubble),
-  );
-
-  // If the last agent turn was a question, show quick replies under the log.
+  // Quick replies for a pending follow-up question (none once triage is done).
   const lastEntry = s.chatLog[s.chatLog.length - 1];
   const showQuick =
     !s.loading &&
+    !s.triage &&
     lastEntry &&
     lastEntry.role === "agent" &&
     lastEntry.kind === "question" &&
     s.currentQuestion;
   const quick = showQuick ? quickReplies(s.currentQuestion as FollowUpQuestion, t, a) : false;
 
-  // If triage is complete, embed the result card at the end of the transcript.
-  const showResult =
-    !s.loading && s.screen === "chat" && s.triage && lastEntry && lastEntry.kind === "result";
+  // If triage is complete, always embed the result card (guidance, warning
+  // signs, emergency number / escalation). This is safety-critical for Level 3,
+  // so it must not depend on which bubble happens to be last in the transcript.
+  const showResult = !s.loading && s.triage !== null;
   const result = showResult ? resultCard(s, t, a) : false;
+
+  // The transcript scrolls. The result card lives INSIDE it (it is part of the
+  // conversation and must stay visible for Level 3). Quick-reply chips are a
+  // separate action bar below the log so they don't scroll away or leak into
+  // the transcript text.
+  const log = el(
+    "div",
+    { class: "chat-log", id: "chat-log", ariaLive: "polite" },
+    ...s.chatLog.map(bubble),
+    result || el("div", { class: "hidden" }),
+  );
 
   const input = el("input", {
     class: "chat-input",
@@ -134,7 +142,10 @@ export function chatScreen(
     ariaLabel: t("chat_placeholder"),
   }) as HTMLInputElement;
 
+  if (s.loading) input.disabled = true;
+
   const send = (): void => {
+    if (s.loading) return;
     const text = input.value.trim();
     if (!text) return;
     input.value = "";
@@ -155,21 +166,43 @@ export function chatScreen(
       {
         class: "chat-voice",
         ariaLabel: t("voice_input"),
-        onclick: a.voiceInput,
+        disabled: s.loading,
+        onclick: () => {
+          if (!s.loading) a.voiceInput();
+        },
       },
-      "🎤",
+      iconMic(),
     ),
     input,
-    el("button", { class: "chat-send", ariaLabel: t("chat_send"), onclick: send }, "➤"),
+    el(
+      "button",
+      { class: "chat-send", ariaLabel: t("chat_send"), disabled: s.loading, onclick: send },
+      iconSend(),
+    ),
   );
+
+  // Auto-scroll after render. For an emergency (Level 3) result, scroll so the
+  // TOP of the result card — where the "call now" number lives — is visible,
+  // rather than the bottom of the transcript. For everything else, scroll to
+  // the newest content as usual.
+  window.setTimeout(() => {
+    const l = document.getElementById("chat-log");
+    if (!l) return;
+    const emergency = s.triage?.triageLevel === 3;
+    const card = l.querySelector(".chat-result") as HTMLElement | null;
+    if (emergency && card) {
+      l.scrollTop = Math.max(0, card.offsetTop - l.offsetTop - 8);
+    } else {
+      l.scrollTop = l.scrollHeight;
+    }
+  }, 30);
 
   return el(
     "div",
     { class: "chat-screen" },
     safetyNotice(t),
     log,
-    quick || el("div", { class: "hidden" }),
-    result || el("div", { class: "hidden" }),
+    quick ? el("div", { class: "quick-bar" }, quick) : el("div", { class: "hidden" }),
     composer,
   );
 }

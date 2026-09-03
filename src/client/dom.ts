@@ -72,6 +72,24 @@ function appendChild(node: HTMLElement, child: Child): void {
   }
 }
 
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/**
+ * Builds an SVG element node-by-node (createElementNS + setAttribute) rather
+ * than parsing a markup string, so icon rendering never goes through an
+ * innerHTML-style sink.
+ */
+export function svg(
+  tag: string,
+  attrs: Record<string, string> = {},
+  ...children: SVGElement[]
+): SVGElement {
+  const node = document.createElementNS(SVG_NS, tag) as unknown as SVGElement;
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  for (const child of children) node.appendChild(child);
+  return node;
+}
+
 export function clear(node: HTMLElement): void {
   while (node.firstChild) node.removeChild(node.firstChild);
 }
