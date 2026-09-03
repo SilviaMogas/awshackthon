@@ -149,6 +149,26 @@ export async function step(input: StepInput): Promise<AgentStepResult> {
     session.availableVitalSigns = input.vitalSigns;
   }
 
+  // Safety-locked states (most notably presenting_level_3, per the state
+  // machine's guarantee that a confirmed emergency never silently reopens
+  // routine screening) cannot legally re-enter screening_for_emergency.
+  // Reaffirm the existing guidance instead of letting the guarded transition
+  // throw — an uncaught InvalidTransitionError would otherwise surface as a
+  // raw "Something went wrong" and could blank out live Level 3 guidance the
+  // instant the user types anything else.
+  if (
+    session.state !== "screening_for_emergency" &&
+    !canTransition(session.state, "screening_for_emergency")
+  ) {
+    return {
+      session,
+      userMessage: session.triage
+        ? userFacingForLevel(session.triage)
+        : "This assessment is still being acted on. If your situation has changed or you need to start over, use \"Start again\".",
+      triage: session.triage,
+    };
+  }
+
   // 3. Emergency screening safety net (always runs before routine questions).
   transition(session, "screening_for_emergency");
   const screenTrace = await tools.emergency_screening({

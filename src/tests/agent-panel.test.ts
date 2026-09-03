@@ -59,3 +59,22 @@ test("agent loop: benign message asks a follow-up question first", async () => {
   assert.ok(res.question, "expected a follow-up question for limited info");
   assert.equal(res.session.state, "awaiting_user_response");
 });
+
+test("agent loop: a message after Level 3 does not crash and keeps the guidance", async () => {
+  const userContext = ctx();
+  await step({
+    sessionId: userContext.sessionId,
+    userContext,
+    message: "sudden chest pressure, difficulty breathing, sweating and dizziness",
+  });
+  // presenting_level_3 cannot legally re-enter screening_for_emergency; the
+  // orchestrator must reaffirm guidance instead of throwing InvalidTransitionError.
+  const res = await step({
+    sessionId: userContext.sessionId,
+    userContext,
+    message: "ok, calling now",
+  });
+  assert.equal(res.session.state, "presenting_level_3");
+  assert.equal(res.triage?.triageLevel, 3, "the Level 3 result must still be present in the response");
+  assert.ok(res.userMessage.length > 0);
+});

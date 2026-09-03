@@ -3,6 +3,7 @@ import { el } from "../dom.js";
 import type { AppState } from "../store.js";
 import { SUPPORTED_LANGUAGES } from "../../shared/constants.js";
 import { apiStatusIndicator } from "./common.js";
+import { ICON_RESET, ICON_CODE } from "../icons.js";
 
 export interface HeaderActions {
   onLang: (lang: string) => void;
@@ -50,24 +51,22 @@ export function appHeader(
     );
     controls.push(scenarioSel);
     controls.push(
-      el(
-        "button",
-        { class: "btn ghost small", onclick: actions.onReset, ariaLabel: t("reset_demo") },
-        "↺",
-      ),
+      el("button", {
+        class: "btn ghost small icon-btn",
+        onclick: actions.onReset,
+        ariaLabel: t("reset_demo"),
+        html: ICON_RESET,
+      }),
     );
   }
 
   controls.push(
-    el(
-      "button",
-      {
-        class: "btn ghost small",
-        onclick: actions.onToggleTech,
-        ariaLabel: t("technical_view"),
-      },
-      "{ }",
-    ),
+    el("button", {
+      class: "btn ghost small icon-btn",
+      onclick: actions.onToggleTech,
+      ariaLabel: t("technical_view"),
+      html: ICON_CODE,
+    }),
   );
 
   return el(

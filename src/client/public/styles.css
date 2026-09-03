@@ -47,16 +47,17 @@ body {
   background: rgba(245,248,250,.92);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px;
   padding: 14px 24px; margin: 0 -24px 28px;
 }
-.header .brand { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.header .brand { display: flex; align-items: center; gap: 10px; flex: 1 1 auto; min-width: 0; }
 .header .logo {
   width: 42px; height: 42px; flex: none; display: block;
 }
 .header h1 { font-size: 1.02rem; margin: 0; line-height: 1.1; color: var(--navy); letter-spacing: -.02em; }
 .header .sub { font-size: .72rem; color: var(--text-muted); margin: 3px 0 0; }
-.header .controls { display: flex; align-items: center; gap: 8px; flex: none; }
+.header .controls { display: flex; align-items: center; gap: 8px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
+.icon-btn { padding: 8px !important; width: 34px; height: 34px; display: inline-grid; place-items: center; }
 
 .select, .input, .textarea {
   font: inherit; color: var(--text); background: var(--surface);
@@ -203,7 +204,7 @@ details.prev .pa:last-child { border-bottom: none; }
   background: var(--navy); color: #cbd5e1; border-radius: var(--radius);
   padding: 16px; font-size: .82rem; margin-bottom: 16px;
 }
-.tech h3 { color: #e2e8f0; margin-top: 0; }
+.tech h3.tech-title { color: #e2e8f0; margin-top: 0; display: flex; align-items: center; gap: 8px; }
 .tech .kv { display: grid; grid-template-columns: 40% 60%; gap: 4px 10px; margin: 8px 0; }
 .tech .kv dt { color: #94a3b8; }
 .tech .kv dd { margin: 0; color: #e2e8f0; word-break: break-word; }
