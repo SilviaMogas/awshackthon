@@ -123,14 +123,13 @@ export function chatScreen(
   const showResult = !s.loading && s.triage !== null;
   const result = showResult ? resultCard(s, t, a) : false;
 
-  // The transcript scrolls. The result card lives INSIDE it (it is part of the
-  // conversation and must stay visible for Level 3). Quick-reply chips are a
-  // separate action bar below the log so they don't scroll away or leak into
-  // the transcript text.
+  // The transcript scrolls; quick replies and the result card live INSIDE it so
+  // they are always visible in the conversation (not below the fold).
   const log = el(
     "div",
     { class: "chat-log", id: "chat-log", ariaLive: "polite" },
     ...s.chatLog.map(bubble),
+    quick || el("div", { class: "hidden" }),
     result || el("div", { class: "hidden" }),
   );
 
@@ -181,20 +180,10 @@ export function chatScreen(
     ),
   );
 
-  // Auto-scroll after render. For an emergency (Level 3) result, scroll so the
-  // TOP of the result card — where the "call now" number lives — is visible,
-  // rather than the bottom of the transcript. For everything else, scroll to
-  // the newest content as usual.
+  // Auto-scroll the transcript to the newest content after render.
   window.setTimeout(() => {
     const l = document.getElementById("chat-log");
-    if (!l) return;
-    const emergency = s.triage?.triageLevel === 3;
-    const card = l.querySelector(".chat-result") as HTMLElement | null;
-    if (emergency && card) {
-      l.scrollTop = Math.max(0, card.offsetTop - l.offsetTop - 8);
-    } else {
-      l.scrollTop = l.scrollHeight;
-    }
+    if (l) l.scrollTop = l.scrollHeight;
   }, 30);
 
   return el(
@@ -202,7 +191,6 @@ export function chatScreen(
     { class: "chat-screen" },
     safetyNotice(t),
     log,
-    quick ? el("div", { class: "quick-bar" }, quick) : el("div", { class: "hidden" }),
     composer,
   );
 }

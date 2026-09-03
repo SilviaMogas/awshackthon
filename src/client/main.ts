@@ -116,10 +116,13 @@ async function callAgent(opts: {
 
   const s = store.get();
   const t = createTranslator(s.lang);
-
   // The product is fully conversational: every agent interaction happens in the
-  // chat view. Make sure we are on the chat screen before the round-trip so a
-  // slow or failed request never leaves the user on a stale legacy screen.
+  // chat view. We no longer route to the legacy page-flow screens, which could
+  // strand the user on the old "What is happening?" screen after an error.
+  const inChat = true;
+
+  // Make sure we are on the chat screen before the round-trip so a slow or
+  // failed request never leaves the user on a stale legacy screen.
   store.set({ screen: "chat", loading: true, error: null });
 
   const typingId = pushTyping(t);
@@ -401,17 +404,10 @@ const actions: ScreenActions = {
     const answers = s.answers.filter((a) => a.questionId !== answer.questionId);
     const finalAnswer = skip ? { ...answer, answer: "Skipped" } : answer;
     answers.push(finalAnswer);
-    // Echo the chosen answer as a user bubble in the conversation, formatted
-    // for humans (booleans -> Yes/No, arrays -> comma list).
-    const t = createTranslator(s.lang);
-    let shown: string;
-    if (typeof finalAnswer.answer === "boolean") {
-      shown = finalAnswer.answer ? t("yes") : t("no");
-    } else if (Array.isArray(finalAnswer.answer)) {
-      shown = finalAnswer.answer.join(", ");
-    } else {
-      shown = String(finalAnswer.answer);
-    }
+    // Echo the chosen answer as a user bubble in the conversation.
+    const shown = Array.isArray(finalAnswer.answer)
+      ? finalAnswer.answer.join(", ")
+      : String(finalAnswer.answer);
     pushChat("user", shown, "text");
     store.set({ answers });
     await callAgent({ answer: finalAnswer, chat: true });
