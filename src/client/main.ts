@@ -238,12 +238,28 @@ function actionKey(prefix: string): string {
   return `${prefix}-${s.userContext.sessionId}-${s.triage?.requestId ?? "unknown"}`;
 }
 
-async function performProviderContact(): Promise<void> {
+/**
+ * Shared scaffolding for a consent-gated action: guards against overlapping
+ * calls, flips `loading`, routes a thrown error through `handleError`, and
+ * always clears the guard + loading flag on the way out.
+ */
+async function runGuardedAction(run: () => Promise<void>): Promise<void> {
   if (actionInFlight) return;
   actionInFlight = true;
-  const s = store.get();
   try {
     store.set({ loading: true, error: null });
+    await run();
+  } catch (e) {
+    handleError(e);
+  } finally {
+    actionInFlight = false;
+    if (store.get().loading) store.set({ loading: false });
+  }
+}
+
+async function performProviderContact(): Promise<void> {
+  await runGuardedAction(async () => {
+    const s = store.get();
     const res = await api.providerContact({
       sessionId: s.userContext.sessionId,
       triageRequestId: s.triage?.requestId ?? "unknown",
@@ -255,20 +271,12 @@ async function performProviderContact(): Promise<void> {
     });
     store.set({ providerContact: res, loading: false });
     await refreshAudit();
-  } catch (e) {
-    handleError(e);
-  } finally {
-    actionInFlight = false;
-    if (store.get().loading) store.set({ loading: false });
-  }
+  });
 }
 
 async function performEscalation(): Promise<void> {
-  if (actionInFlight) return;
-  actionInFlight = true;
-  const s = store.get();
-  try {
-    store.set({ loading: true, error: null });
+  await runGuardedAction(async () => {
+    const s = store.get();
     const res = await api.escalate({
       sessionId: s.userContext.sessionId,
       triageRequestId: s.triage?.requestId ?? "unknown",
@@ -281,12 +289,7 @@ async function performEscalation(): Promise<void> {
     store.set({ escalation: res, loading: false });
     await refreshAudit();
     if (res.simulated || res.status !== "failed") monitorEscalation(res.referenceId);
-  } catch (e) {
-    handleError(e);
-  } finally {
-    actionInFlight = false;
-    if (store.get().loading) store.set({ loading: false });
-  }
+  });
 }
 
 let monitorTimer: number | null = null;
