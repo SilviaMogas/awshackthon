@@ -38,6 +38,10 @@ import { consentModal, providerContactResult } from "./components/consent.js";
 
 const root = document.getElementById("app") as HTMLElement;
 let pendingConsent: null | { kind: "provider" | "escalation" } = null;
+/** Guards against overlapping agent round-trips (double-clicks, rapid Enter). */
+let agentInFlight = false;
+/** Guards against a consent action (escalation / provider contact) firing twice. */
+let actionInFlight = false;
 
 // ---------------------------------------------------------------------------
 // Bootstrapping
@@ -74,9 +78,13 @@ async function refreshAudit(): Promise<void> {
 }
 
 // ---- Chat log helpers -----------------------------------------------------
+/** Keep the transcript bounded so long sessions don't grow memory/render cost. */
+const MAX_CHAT_ENTRIES = 100;
+
 function pushChat(role: ChatEntry["role"], content: string, kind: ChatEntry["kind"]): void {
   const s = store.get();
-  store.set({ chatLog: [...s.chatLog, { id: genId("msg"), role, content, kind, timestamp: nowIso() }] });
+  const next = [...s.chatLog, { id: genId("msg"), role, content, kind, timestamp: nowIso() }];
+  store.set({ chatLog: next.length > MAX_CHAT_ENTRIES ? next.slice(-MAX_CHAT_ENTRIES) : next });
 }
 
 /** Add a transient "typing" bubble so the chat feels responsive. */
@@ -100,6 +108,12 @@ async function callAgent(opts: {
   /** In the chat view we keep screen=chat and render bubbles instead of pages. */
   chat?: boolean;
 }): Promise<void> {
+  // In-flight guard: ignore a second concurrent round-trip (double-click, rapid
+  // Enter, double-tapped quick reply) so we never push duplicate bubbles or
+  // race store updates.
+  if (agentInFlight) return;
+  agentInFlight = true;
+
   const s = store.get();
   const t = createTranslator(s.lang);
   // The product is fully conversational: every agent interaction happens in the
@@ -111,7 +125,7 @@ async function callAgent(opts: {
   // failed request never leaves the user on a stale legacy screen.
   store.set({ screen: "chat", loading: true, error: null });
 
-  const typingId = inChat ? pushTyping(t) : null;
+  const typingId = pushTyping(t);
   try {
     const res = await api.agentMessage({
       userContext: s.userContext,
@@ -121,33 +135,33 @@ async function callAgent(opts: {
       forceTriage: opts.forceTriage,
     });
 
-    if (typingId) removeChat(typingId);
+    removeChat(typingId);
 
     const patch: Partial<AppState> = {
       agentState: res.state,
       transitions: res.transitions,
       lastTool: res.lastTool,
       loading: false,
-      currentQuestion: res.question,
+      screen: "chat",
+      // Clear the pending question unless the agent asked a new one; otherwise a
+      // message typed after results is wrongly treated as an answer.
+      currentQuestion: res.question ?? null,
     };
 
     if (res.triage) {
       patch.triage = res.triage;
       patch.summary = res.triage.clinicalSummary;
-      patch.screen = inChat ? "chat" : "result";
+      patch.currentQuestion = null;
       if (res.triage.triageLevel === 3) {
         await ensureEmergencyNumber();
       }
-    } else if (res.question) {
-      patch.screen = inChat ? "chat" : "questions";
     } else if (res.fallback) {
-      patch.screen = inChat ? "chat" : "result";
       patch.error = res.userMessage;
     }
     store.set(patch);
 
-    // In chat mode, turn the agent turn into a bubble (question / result / text).
-    if (inChat) {
+    // Turn the agent turn into a bubble (question / result / text).
+    {
       const kind: ChatEntry["kind"] = res.triage
         ? "result"
         : res.question
@@ -158,11 +172,18 @@ async function callAgent(opts: {
     }
     await refreshAudit();
   } catch (e) {
-    if (typingId) removeChat(typingId);
+    removeChat(typingId);
     handleError(e);
-    if (inChat) {
-      pushChat("agent", store.get().error ?? createTranslator(store.get().lang)("error_generic"), "text");
-    }
+    pushChat(
+      "agent",
+      store.get().error ?? createTranslator(store.get().lang)("error_generic"),
+      "text",
+    );
+  } finally {
+    // Always release the guard and clear the loading flag, even on error, so
+    // the UI can never get stuck in a permanent loading/disabled state.
+    agentInFlight = false;
+    if (store.get().loading) store.set({ loading: false });
   }
 }
 
@@ -209,10 +230,39 @@ function recordConsent(type: ConsentType, granted: boolean): ConsentRecord {
   return rec;
 }
 
-async function performProviderContact(): Promise<void> {
+/**
+ * Stable idempotency key for a consent action, derived from the session and the
+ * current triage request. The same assessment reuses the same key (so retries
+ * dedupe), but a new triage produces a new key (so a genuinely new action is
+ * not blocked as a false duplicate).
+ */
+function actionKey(prefix: string): string {
   const s = store.get();
+  return `${prefix}-${s.userContext.sessionId}-${s.triage?.requestId ?? "unknown"}`;
+}
+
+/**
+ * Shared scaffolding for a consent-gated action: guards against overlapping
+ * calls, flips `loading`, routes a thrown error through `handleError`, and
+ * always clears the guard + loading flag on the way out.
+ */
+async function runGuardedAction(run: () => Promise<void>): Promise<void> {
+  if (actionInFlight) return;
+  actionInFlight = true;
   try {
     store.set({ loading: true, error: null });
+    await run();
+  } catch (e) {
+    handleError(e);
+  } finally {
+    actionInFlight = false;
+    if (store.get().loading) store.set({ loading: false });
+  }
+}
+
+async function performProviderContact(): Promise<void> {
+  await runGuardedAction(async () => {
+    const s = store.get();
     const res = await api.providerContact({
       sessionId: s.userContext.sessionId,
       triageRequestId: s.triage?.requestId ?? "unknown",
@@ -220,19 +270,16 @@ async function performProviderContact(): Promise<void> {
       clinicalSummary: s.summary ?? (s.triage?.clinicalSummary as never),
       suggestedProviderType: s.triage?.suggestedProviderType,
       submittedAt: nowIso(),
-      idempotencyKey: genId("pc"),
+      idempotencyKey: actionKey("pc"),
     });
     store.set({ providerContact: res, loading: false });
     await refreshAudit();
-  } catch (e) {
-    handleError(e);
-  }
+  });
 }
 
 async function performEscalation(): Promise<void> {
-  const s = store.get();
-  try {
-    store.set({ loading: true, error: null });
+  await runGuardedAction(async () => {
+    const s = store.get();
     const res = await api.escalate({
       sessionId: s.userContext.sessionId,
       triageRequestId: s.triage?.requestId ?? "unknown",
@@ -240,30 +287,44 @@ async function performEscalation(): Promise<void> {
       clinicalSummary: s.summary ?? (s.triage?.clinicalSummary as never),
       location: s.userContext.locationSharingConsent ? s.userContext.currentLocation : undefined,
       submittedAt: nowIso(),
-      idempotencyKey: s.escalation?.referenceId ? `dup-${s.escalation.referenceId}` : genId("esc"),
+      idempotencyKey: actionKey("esc"),
     });
     store.set({ escalation: res, loading: false });
     await refreshAudit();
     if (res.simulated || res.status !== "failed") monitorEscalation(res.referenceId);
-  } catch (e) {
-    handleError(e);
-  }
+  });
 }
 
 let monitorTimer: number | null = null;
+export function stopEscalationMonitor(): void {
+  if (monitorTimer) {
+    window.clearInterval(monitorTimer);
+    monitorTimer = null;
+  }
+}
 function monitorEscalation(referenceId: string): void {
-  if (monitorTimer) window.clearInterval(monitorTimer);
+  stopEscalationMonitor();
   let polls = 0;
+  let consecutiveErrors = 0;
   monitorTimer = window.setInterval(async () => {
+    // Stop polling if the user has left the result (e.g. started a new session).
+    if (store.get().escalation?.referenceId !== referenceId) {
+      stopEscalationMonitor();
+      return;
+    }
     polls += 1;
     try {
       const res = await api.escalationStatus(referenceId);
+      consecutiveErrors = 0;
       store.set({ escalation: res });
-      if (res.status === "acknowledged" || res.status === "completed" || polls >= 4) {
-        if (monitorTimer) window.clearInterval(monitorTimer);
+      if (res.status === "acknowledged" || res.status === "completed" || polls >= 5) {
+        stopEscalationMonitor();
       }
     } catch {
-      if (monitorTimer) window.clearInterval(monitorTimer);
+      // Tolerate a transient blip; only give up after repeated failures so a
+      // single hiccup doesn't silently freeze a non-terminal status.
+      consecutiveErrors += 1;
+      if (consecutiveErrors >= 3 || polls >= 5) stopEscalationMonitor();
     }
   }, 1600);
 }
@@ -288,6 +349,9 @@ function openChat(): void {
   const s = store.get();
   const t = createTranslator(s.lang);
   // Fresh conversation each time the chat is opened from welcome.
+  stopEscalationMonitor();
+  agentInFlight = false;
+  actionInFlight = false;
   store.resetAssessment(true);
   store.set({ screen: "chat" });
   pushChat("agent", t("chat_greeting"), "text");
@@ -389,19 +453,31 @@ const actions: ScreenActions = {
 const chatActions: ChatActions = {
   ...actions,
   sendMessage: async (text) => {
+    const clean = text.trim();
+    if (!clean) return;
+    // Don't accept another message while a round-trip is in flight (otherwise
+    // we'd add an orphaned user bubble the guard then ignores).
+    if (agentInFlight) return;
+
     const s = store.get();
-    pushChat("user", text, "text");
+    pushChat("user", clean, "text");
     // The first user message becomes the chief complaint.
-    if (!s.chiefComplaint) store.set({ chiefComplaint: text });
+    if (!s.chiefComplaint) store.set({ chiefComplaint: clean });
     scrollChatToBottom();
     // If a follow-up question is pending and it's free-text/number, treat this
     // message as the answer to that question; otherwise it's a new message.
     const q = s.currentQuestion;
     if (q && (q.answerType === "text" || q.answerType === "number")) {
+      let value: string | number = clean;
+      if (q.answerType === "number") {
+        const n = Number(clean);
+        // Non-numeric reply to a number question -> send as free text, not NaN.
+        value = Number.isFinite(n) ? n : clean;
+      }
       const answer: SymptomAnswer = {
         questionId: q.questionId,
         question: q.question,
-        answer: q.answerType === "number" ? Number(text) : text,
+        answer: value,
         answeredAt: nowIso(),
         source: "user",
       };
@@ -410,7 +486,7 @@ const chatActions: ChatActions = {
       store.set({ answers });
       await callAgent({ answer, chat: true });
     } else {
-      await callAgent({ message: text, chat: true });
+      await callAgent({ message: clean, chat: true });
     }
   },
 };
@@ -513,6 +589,20 @@ function render(s: AppState): void {
     },
   });
 
+  // Preserve the composer's in-progress text + focus across the full rebuild,
+  // so a background re-render (audit refresh, escalation poll, etc.) can't wipe
+  // what the user is typing or steal focus.
+  const prevInput = document.getElementById("chat-input") as HTMLInputElement | null;
+  const preserved =
+    prevInput != null
+      ? {
+          value: prevInput.value,
+          focused: document.activeElement === prevInput,
+          start: prevInput.selectionStart,
+          end: prevInput.selectionEnd,
+        }
+      : null;
+
   const body = renderScreen(s, t);
   const modal = renderConsentModal(s, t);
   const tech = s.showTechnicalPanel ? technicalPanel(s, t) : null;
@@ -526,6 +616,26 @@ function render(s: AppState): void {
     tech ?? el("div", { class: "hidden" }),
     el("footer", { class: "footer" }, `${t("app_name")} · ${s.demoMode ? t("demo_badge") : "live"} · policy ${s.policyVersion}`),
   );
+
+  if (preserved) {
+    const nextInput = document.getElementById("chat-input") as HTMLInputElement | null;
+    if (nextInput) {
+      if (preserved.value && !nextInput.value) nextInput.value = preserved.value;
+      if (preserved.focused) {
+        nextInput.focus();
+        try {
+          nextInput.setSelectionRange(preserved.start ?? nextInput.value.length, preserved.end ?? nextInput.value.length);
+        } catch {
+          /* setSelectionRange can throw on some input types; ignore */
+        }
+      }
+    }
+  }
+
+  // Remove any previously-mounted consent modal before (re)adding the current
+  // one. Without this, every re-render (e.g. ticking a consent box) would stack
+  // a new overlay on top of a stale one, so the visible modal looked frozen.
+  document.querySelectorAll(".overlay").forEach((n) => n.remove());
   if (modal) document.body.appendChild(modal);
 }
 

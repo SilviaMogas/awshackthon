@@ -12,20 +12,29 @@
 import type { FollowUpQuestion, SymptomAnswer } from "../shared/types.js";
 import { FOLLOW_UP_POOL } from "../services/triage/index.js";
 
-/** Priority order of question ids. */
-const PRIORITY = [
-  "onset",
-  "severity",
-  "progression",
-  "sudden_onset",
-  "associated_symptoms",
-  "relevant_conditions",
-];
+/**
+ * Priority order of follow-up question ids. Kept short and non-overlapping so
+ * the user is not asked the same thing twice (timing + suddenness are now a
+ * single "onset" question).
+ */
+const PRIORITY = ["onset", "severity", "progression", "associated_symptoms"];
+
+/**
+ * Maximum number of follow-up questions to ask before proceeding to triage.
+ * Keeps the conversation short and purposeful instead of dripping every
+ * possible question one at a time.
+ */
+const MAX_FOLLOW_UPS = 3;
 
 export function nextFollowUpQuestion(
   answers: SymptomAnswer[],
 ): FollowUpQuestion | null {
   const answered = new Set(answers.map((a) => a.questionId));
+
+  // Stop asking once the user has answered enough follow-ups; move to triage.
+  const answeredFollowUps = PRIORITY.filter((id) => answered.has(id)).length;
+  if (answeredFollowUps >= MAX_FOLLOW_UPS) return null;
+
   for (const id of PRIORITY) {
     if (answered.has(id)) continue;
     const q = FOLLOW_UP_POOL.find((x) => x.questionId === id);

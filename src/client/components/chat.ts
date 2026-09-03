@@ -15,6 +15,7 @@ import { safetyNotice } from "./common.js";
 import { levelOneResult, levelTwoResult, ScreenActions } from "./screens.js";
 import { levelThreeResult } from "./level3.js";
 import { providerContactResult } from "./consent.js";
+import { iconMic, iconSend } from "../icons.js";
 
 export interface ChatActions extends ScreenActions {
   sendMessage: (text: string) => void;
@@ -140,7 +141,10 @@ export function chatScreen(
     ariaLabel: t("chat_placeholder"),
   }) as HTMLInputElement;
 
+  if (s.loading) input.disabled = true;
+
   const send = (): void => {
+    if (s.loading) return;
     const text = input.value.trim();
     if (!text) return;
     input.value = "";
@@ -161,12 +165,19 @@ export function chatScreen(
       {
         class: "chat-voice",
         ariaLabel: t("voice_input"),
-        onclick: a.voiceInput,
+        disabled: s.loading,
+        onclick: () => {
+          if (!s.loading) a.voiceInput();
+        },
       },
-      "🎤",
+      iconMic(),
     ),
     input,
-    el("button", { class: "chat-send", ariaLabel: t("chat_send"), onclick: send }, "➤"),
+    el(
+      "button",
+      { class: "chat-send", ariaLabel: t("chat_send"), disabled: s.loading, onclick: send },
+      iconSend(),
+    ),
   );
 
   // Auto-scroll the transcript to the newest content after render.
